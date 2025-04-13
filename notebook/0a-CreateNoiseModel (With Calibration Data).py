@@ -21,16 +21,36 @@ import matplotlib.pyplot as plt, numpy as np, pickle
 from scipy.stats import norm
 from tifffile import imread, imwrite as imsave
 import sys
-# Add the parent directory and model directory to the path
-sys.path.append('../')
-sys.path.append('../model')
-# Import from the local model directory instead of divnoising module
-from model.gaussianMixtureNoiseModel import GaussianMixtureNoiseModel
-import model.histNoiseModel as histNoiseModel
-from model.utils import plotProbabilityDistribution
+
+# Determine if running in Colab
+IN_COLAB = 'google.colab' in sys.modules
+
+# If in Colab, set up paths properly
+if IN_COLAB:
+    # Ensure the model module is in the path
+    if not os.path.exists('model'):
+        # Clone the repository if needed
+        import subprocess
+        subprocess.run(["git", "clone", "https://github.com/yourusername/DivNoising-VAE.git"])
+        os.chdir("DivNoising-VAE")
+    
+    # Add the necessary paths
+    sys.path.append('./')
+    from model.gaussianMixtureNoiseModel import GaussianMixtureNoiseModel
+    import model.histNoiseModel as histNoiseModel
+    from model.utils import plotProbabilityDistribution
+else:
+    # Local machine paths
+    # Add the parent directory and model directory to the path
+    sys.path.append('../')
+    sys.path.append('../model')
+    # Import from the local model directory instead of divnoising module
+    from model.gaussianMixtureNoiseModel import GaussianMixtureNoiseModel
+    import model.histNoiseModel as histNoiseModel
+    from model.utils import plotProbabilityDistribution
 
 dtype = torch.float
-device = torch.device("cuda:0") 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
 
 
 # ### Download data
@@ -40,15 +60,41 @@ device = torch.device("cuda:0")
 # In[2]:
 
 
-# Download data
-if not os.path.isdir('./data'):
-    os.mkdir('./data')
-
-zipPath="./data/Mouse_skull_nuclei.zip"
-if not os.path.exists(zipPath):  
-    data = urllib.request.urlretrieve('https://zenodo.org/record/5156960/files/Mouse%20skull%20nuclei.zip?download=1', zipPath)
-    with zipfile.ZipFile(zipPath, 'r') as zip_ref:
-        zip_ref.extractall("./data")
+# Check if in Colab and handle data accordingly
+if IN_COLAB:
+    from google.colab import files
+    
+    # Create data directory if it doesn't exist
+    if not os.path.isdir('./data'):
+        os.mkdir('./data')
+    
+    # Check if data is already present
+    if not os.path.exists('./data/Mouse_skull_nuclei/edgeoftheslide_300offset.tif'):
+        # Option 1: Manual upload
+        print("Please upload the Mouse_skull_nuclei.zip file:")
+        uploaded = files.upload()  # This will open a file picker
+        
+        # Extract the uploaded zip
+        zip_filename = next(iter(uploaded.keys()))
+        with zipfile.ZipFile(zip_filename, 'r') as zip_ref:
+            zip_ref.extractall('./data/')
+        
+        # Option 2: Direct download (uncomment to use this instead)
+        # zipPath="./data/Mouse_skull_nuclei.zip"
+        # if not os.path.exists(zipPath):  
+        #     urllib.request.urlretrieve('https://zenodo.org/record/5156960/files/Mouse%20skull%20nuclei.zip?download=1', zipPath)
+        #     with zipfile.ZipFile(zipPath, 'r') as zip_ref:
+        #         zip_ref.extractall("./data")
+else:
+    # Original download code for local machine
+    if not os.path.isdir('./data'):
+        os.mkdir('./data')
+    
+    zipPath="./data/Mouse_skull_nuclei.zip"
+    if not os.path.exists(zipPath):  
+        data = urllib.request.urlretrieve('https://zenodo.org/record/5156960/files/Mouse%20skull%20nuclei.zip?download=1', zipPath)
+        with zipfile.ZipFile(zipPath, 'r') as zip_ref:
+            zip_ref.extractall("./data")
 
 
 # The noise model is a characteristic of your camera and not of the sample. The downloaded data folder contains a set of calibration images (For the Mouse nuclei dataset, it is ```edgeoftheslide_300offset.tif``` showing the edge of a slide and the data to be denoised is named ```example2_digital_offset300.tif```). The calibration images can be anything which is static and imaged multiple times in succession. Thus, the edge of slide works as well. We can either bin the noisy - GT pairs (obtained from noisy calibration images) as a 2-D histogram or fit a GMM distribution to obtain a smooth, parametric description of the noise model.
@@ -59,6 +105,10 @@ if not os.path.exists(zipPath):
 
 
 path="./data/Mouse_skull_nuclei/"
+# Check if file exists before trying to load it
+if not os.path.exists(path+'edgeoftheslide_300offset.tif'):
+    raise FileNotFoundError(f"Could not find data file at {path}edgeoftheslide_300offset.tif. Please make sure you've uploaded the data correctly.")
+
 observation= imread(path+'edgeoftheslide_300offset.tif') # Load the appropriate calibration data
 
 dataName = 'nuclei' # Name of the noise model 
