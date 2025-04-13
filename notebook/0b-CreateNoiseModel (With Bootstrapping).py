@@ -57,7 +57,8 @@ if not os.path.exists(zipPath):
 # In[ ]:
 
 
-observation= imread('./data/Mouse_skull_nuclei/edgeoftheslide_300offset.tif') #Load the noisy data to be denoised
+path = "./data/Mouse_skull_nuclei/"
+observation = imread(path+'edgeoftheslide_300offset.tif') #Load the noisy data to be denoised
 
 
 # ### Load pseudo GT
