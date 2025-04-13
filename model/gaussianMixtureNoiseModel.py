@@ -13,7 +13,7 @@ def fastShuffle(series, num):
         series = series[np.random.permutation(length),:]
     return series
 
-import divnoising.histNoiseModel
+import histNoiseModel
 
 class GaussianMixtureNoiseModel:
     """The GaussianMixtureNoiseModel class describes a noise model which is parameterized as a mixture of gaussians.

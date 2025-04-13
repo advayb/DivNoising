@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import time
 import datetime
-from divnoising import utils
+import utils
 
 def lossFunctionKLD(mu, logvar):
     """Compute KL divergence loss. 

@@ -5,7 +5,8 @@ import logging
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 from torch.utils.data import DataLoader
-from divnoising import dataLoader, utils
+import dataLoader
+import utils
 from nets import lightningmodel
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint
