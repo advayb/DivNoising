@@ -18,7 +18,7 @@ import sys
 # Add the parent directory and model directory to the path
 sys.path.append('../')
 sys.path.append('../model')
-from tifffile import imread
+from tifffile import imread, imwrite as imsave
 # Import from local model directory instead of divnoising
 from model import utils, training
 from model.gaussianMixtureNoiseModel import GaussianMixtureNoiseModel

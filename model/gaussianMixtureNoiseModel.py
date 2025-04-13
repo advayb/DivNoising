@@ -5,7 +5,7 @@ import numpy as np
 import pickle
 from torch.distributions import normal
 from scipy.stats import norm
-from tifffile import imread
+from tifffile import imread, imwrite as imsave
 
 def fastShuffle(series, num):
     length = series.shape[0]

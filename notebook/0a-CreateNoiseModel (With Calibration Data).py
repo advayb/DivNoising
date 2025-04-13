@@ -19,7 +19,7 @@ import zipfile
 from torch.distributions import normal
 import matplotlib.pyplot as plt, numpy as np, pickle
 from scipy.stats import norm
-from tifffile import imread
+from tifffile import imread, imwrite as imsave
 import sys
 # Add the parent directory and model directory to the path
 sys.path.append('../')

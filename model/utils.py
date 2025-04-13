@@ -5,7 +5,7 @@ import time
 from sklearn.feature_extraction import image
 from tqdm import tqdm
 from glob import glob
-from tifffile import imsave
+from tifffile import imwrite as imsave
 from sklearn.cluster import MeanShift
 from matplotlib import pyplot as plt
 from IPython.display import clear_output

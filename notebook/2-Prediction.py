@@ -20,7 +20,7 @@ sys.path.append('../model')
 from model import utils
 from nets import lightningmodel
 from glob import glob
-from tifffile import imread
+from tifffile import imread, imwrite as imsave
 from matplotlib import pyplot as plt
 device = torch.cuda.current_device()
 
