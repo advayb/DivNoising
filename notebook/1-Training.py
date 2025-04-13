@@ -15,17 +15,38 @@ import os
 import numpy as np
 import torch
 import sys
-# Add the parent directory and model directory to the path
-sys.path.append('../')
-sys.path.append('../model')
-from tifffile import imread, imwrite as imsave
-# Import from local model directory instead of divnoising
-from model import utils, training
-from model.gaussianMixtureNoiseModel import GaussianMixtureNoiseModel
 
-device = torch.cuda.current_device()
+# Determine if running in Colab
+IN_COLAB = 'google.colab' in sys.modules
+
+# If in Colab, set up paths properly
+if IN_COLAB:
+    # Ensure the model module is in the path
+    if not os.path.exists('model'):
+        # Clone the repository if needed
+        import subprocess
+        subprocess.run(["git", "clone", "https://github.com/yourusername/DivNoising-VAE.git"])
+        os.chdir("DivNoising-VAE")
+    
+    # Add the necessary paths
+    sys.path.append('./')
+    from tifffile import imread, imwrite as imsave
+    # Import from model directory
+    from model import utils, training
+    from model.gaussianMixtureNoiseModel import GaussianMixtureNoiseModel
+else:
+    # Local machine paths
+    # Add the parent directory and model directory to the path
+    sys.path.append('../')
+    sys.path.append('../model')
+    from tifffile import imread, imwrite as imsave
+    # Import from local model directory instead of divnoising
+    from model import utils, training
+    from model.gaussianMixtureNoiseModel import GaussianMixtureNoiseModel
+
+device = torch.cuda.current_device() if torch.cuda.is_available() else torch.device("cpu")
 if not torch.cuda.is_available():
-    raise ValueError("GPU not found, code will run on CPU and can be extremely slow!")
+    print("Warning: GPU not found, code will run on CPU and can be extremely slow!")
 
 
 # ### Specify ```path``` to load data
@@ -34,8 +55,32 @@ if not torch.cuda.is_available():
 # In[ ]:
 
 
-path="./data/Mouse skull nuclei/"
-observation= imread(path+'example2_digital_offset300.tif')
+# Check if in Colab and handle data accordingly
+if IN_COLAB:
+    from google.colab import files
+    
+    # Create data directory if it doesn't exist
+    if not os.path.isdir('./data'):
+        os.mkdir('./data')
+    if not os.path.isdir('./data/Mouse_skull_nuclei'):
+        os.mkdir('./data/Mouse_skull_nuclei')
+    
+    # Check if data is already present
+    if not os.path.exists('./data/Mouse_skull_nuclei/example2_digital_offset300.tif'):
+        # Option 1: Manual upload
+        print("Please upload the dataset file (example2_digital_offset300.tif):")
+        uploaded = files.upload()  # This will open a file picker
+        
+        # Move the uploaded file to the correct location
+        for filename in uploaded.keys():
+            os.rename(filename, f"./data/Mouse_skull_nuclei/{filename}")
+
+path="./data/Mouse_skull_nuclei/"
+# Check if file exists before trying to load it
+if not os.path.exists(path+'example2_digital_offset300.tif'):
+    raise FileNotFoundError(f"Could not find data file at {path}example2_digital_offset300.tif. Please make sure you've uploaded the data correctly.")
+
+observation = imread(path+'example2_digital_offset300.tif')
 # observation= imread(path+'*.tif') # To load multiple individual 2D tif images
 
 

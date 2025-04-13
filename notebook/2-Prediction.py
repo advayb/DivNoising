@@ -13,16 +13,44 @@ import numpy as np
 import torch
 import time
 import sys
-# Add the parent directory and model directory to the path
-sys.path.append('../')
-sys.path.append('../model')
-# Import from local model directory instead of divnoising
-from model import utils
-from nets import lightningmodel
-from glob import glob
-from tifffile import imread, imwrite as imsave
-from matplotlib import pyplot as plt
-device = torch.cuda.current_device()
+import os
+
+# Determine if running in Colab
+IN_COLAB = 'google.colab' in sys.modules
+
+# If in Colab, set up paths properly
+if IN_COLAB:
+    # Ensure the model module is in the path
+    if not os.path.exists('model'):
+        # Clone the repository if needed
+        import subprocess
+        subprocess.run(["git", "clone", "https://github.com/yourusername/DivNoising-VAE.git"])
+        os.chdir("DivNoising-VAE")
+    
+    # Add the necessary paths
+    sys.path.append('./')
+    import os
+    from tifffile import imread, imwrite as imsave
+    # Import from model directory
+    from model import utils
+    from nets import lightningmodel
+    from glob import glob
+    from matplotlib import pyplot as plt
+else:
+    # Local machine paths
+    # Add the parent directory and model directory to the path
+    sys.path.append('../')
+    sys.path.append('../model')
+    # Import from local model directory instead of divnoising
+    from model import utils
+    from nets import lightningmodel
+    from glob import glob
+    from tifffile import imread, imwrite as imsave
+    from matplotlib import pyplot as plt
+
+device = torch.cuda.current_device() if torch.cuda.is_available() else torch.device("cpu")
+if not torch.cuda.is_available():
+    print("Warning: GPU not found, predictions will run on CPU and can be somewhat slow!")
 
 
 # # Load data to predict on
@@ -32,8 +60,32 @@ device = torch.cuda.current_device()
 # In[ ]:
 
 
-noisy_data_path="data/Mouse skull nuclei/"
-noisy_input= imread(noisy_data_path+'example2_digital_offset300.tif').astype(np.float32)
+# Check if in Colab and handle data accordingly
+if IN_COLAB:
+    from google.colab import files
+    
+    # Create data directory if it doesn't exist
+    if not os.path.isdir('./data'):
+        os.mkdir('./data')
+    if not os.path.isdir('./data/Mouse_skull_nuclei'):
+        os.mkdir('./data/Mouse_skull_nuclei')
+    
+    # Check if data is already present
+    if not os.path.exists('./data/Mouse_skull_nuclei/example2_digital_offset300.tif'):
+        # Option 1: Manual upload
+        print("Please upload the dataset file (example2_digital_offset300.tif):")
+        uploaded = files.upload()  # This will open a file picker
+        
+        # Move the uploaded file to the correct location
+        for filename in uploaded.keys():
+            os.rename(filename, f"./data/Mouse_skull_nuclei/{filename}")
+
+noisy_data_path="./data/Mouse_skull_nuclei/"
+# Check if file exists before trying to load it
+if not os.path.exists(noisy_data_path+'example2_digital_offset300.tif'):
+    raise FileNotFoundError(f"Could not find data file at {noisy_data_path}example2_digital_offset300.tif. Please make sure you've uploaded the data correctly.")
+
+noisy_input = imread(noisy_data_path+'example2_digital_offset300.tif').astype(np.float32)
 # noisy_input= imread(noisy_data_path+'*.tif').astype(np.float32) # To load multiple individual 2D tif images
 
 
@@ -43,15 +95,40 @@ noisy_input= imread(noisy_data_path+'example2_digital_offset300.tif').astype(np.
 # In[ ]:
 
 
-get_ipython().run_cell_magic('capture', '', 'basedir = \'models\'\nmodel_name = \'divnoising_mouse_skull_nuclei_demo\'\n\nname = glob(basedir+"/"+model_name+\'_last.ckpt\')[0]\nvae = lightningmodel.VAELightning.load_from_checkpoint(checkpoint_path = name)\nif not torch.cuda.is_available():\n    raise ValueError("GPU not found, predictions will run on CPU and can be somewhat slow!")\nelse:\n    vae.to(device)\n')
+# In Colab, create directories and upload model if needed
+if IN_COLAB:
+    # Create models directory if it doesn't exist
+    if not os.path.isdir('./models'):
+        os.mkdir('./models')
+    
+    # Check if model is already present
+    if not glob('./models/divnoising_mouse_skull_nuclei_demo_last.ckpt'):
+        print("Please upload your trained model checkpoint (divnoising_mouse_skull_nuclei_demo_last.ckpt):")
+        uploaded = files.upload()  # This will open a file picker
+        
+        # Move the uploaded file to the correct location
+        for filename in uploaded.keys():
+            os.rename(filename, f"./models/{filename}")
+
+basedir = 'models'
+model_name = 'divnoising_mouse_skull_nuclei_demo'
+
+# Find the model checkpoint file
+model_files = glob(f"{basedir}/{model_name}_last.ckpt")
+if not model_files:
+    raise FileNotFoundError(f"Could not find model file at {basedir}/{model_name}_last.ckpt. Please make sure you've uploaded the model correctly.")
+
+name = model_files[0]
+vae = lightningmodel.VAELightning.load_from_checkpoint(checkpoint_path = name)
+vae.to(device)
 
 
-# # Here we predict some qulitative diverse solutions
+# # Here we predict some qualitative diverse solutions
 
 # In[ ]:
 
 
-utils.plot_qualitative_results(noisy_input,vae,device)
+utils.plot_qualitative_results(noisy_input, vae, device)
 
 
 # # Predict denoised images and (optionally) save them

@@ -24,16 +24,36 @@ import pickle
 from scipy.stats import norm
 from tifffile import imread, imwrite as imsave
 import sys
-# Add the parent directory and model directory to the path
-sys.path.append('../')
-sys.path.append('../model')
-# Import from local model directory instead of divnoising
-from model.gaussianMixtureNoiseModel import GaussianMixtureNoiseModel
-import model.histNoiseModel as histNoiseModel
-from model.utils import plotProbabilityDistribution
+
+# Determine if running in Colab
+IN_COLAB = 'google.colab' in sys.modules
+
+# If in Colab, set up paths properly
+if IN_COLAB:
+    # Ensure the model module is in the path
+    if not os.path.exists('model'):
+        # Clone the repository if needed
+        import subprocess
+        subprocess.run(["git", "clone", "https://github.com/yourusername/DivNoising-VAE.git"])
+        os.chdir("DivNoising-VAE")
+    
+    # Add the necessary paths
+    sys.path.append('./')
+    from model.gaussianMixtureNoiseModel import GaussianMixtureNoiseModel
+    import model.histNoiseModel as histNoiseModel
+    from model.utils import plotProbabilityDistribution
+else:
+    # Local machine paths
+    # Add the parent directory and model directory to the path
+    sys.path.append('../')
+    sys.path.append('../model')
+    # Import from local model directory instead of divnoising
+    from model.gaussianMixtureNoiseModel import GaussianMixtureNoiseModel
+    import model.histNoiseModel as histNoiseModel
+    from model.utils import plotProbabilityDistribution
 
 dtype = torch.float
-device = torch.device("cuda:0") 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
 
 
 # ### Download data
@@ -43,21 +63,50 @@ device = torch.device("cuda:0")
 # In[ ]:
 
 
-# Download data
-if not os.path.isdir('./data'):
-    os.mkdir('./data')
-
-zipPath="./data/Mouse_skull_nuclei.zip"
-if not os.path.exists(zipPath):  
-    data = urllib.request.urlretrieve('https://zenodo.org/record/5156960/files/Mouse%20skull%20nuclei.zip?download=1', zipPath)
-    with zipfile.ZipFile(zipPath, 'r') as zip_ref:
-        zip_ref.extractall("./data")
+# Check if in Colab and handle data accordingly
+if IN_COLAB:
+    from google.colab import files
+    
+    # Create data directory if it doesn't exist
+    if not os.path.isdir('./data'):
+        os.mkdir('./data')
+    
+    # Check if data is already present
+    if not os.path.exists('./data/Mouse_skull_nuclei/edgeoftheslide_300offset.tif'):
+        # Option 1: Manual upload
+        print("Please upload the Mouse_skull_nuclei.zip file:")
+        uploaded = files.upload()  # This will open a file picker
+        
+        # Extract the uploaded zip
+        zip_filename = next(iter(uploaded.keys()))
+        with zipfile.ZipFile(zip_filename, 'r') as zip_ref:
+            zip_ref.extractall('./data/')
+        
+        # Option 2: Direct download (uncomment to use this instead)
+        # zipPath="./data/Mouse_skull_nuclei.zip"
+        # if not os.path.exists(zipPath):  
+        #     urllib.request.urlretrieve('https://zenodo.org/record/5156960/files/Mouse%20skull%20nuclei.zip?download=1', zipPath)
+        #     with zipfile.ZipFile(zipPath, 'r') as zip_ref:
+        #         zip_ref.extractall("./data")
+else:
+    # Original download code for local machine
+    if not os.path.isdir('./data'):
+        os.mkdir('./data')
+    
+    zipPath="./data/Mouse_skull_nuclei.zip"
+    if not os.path.exists(zipPath):  
+        data = urllib.request.urlretrieve('https://zenodo.org/record/5156960/files/Mouse%20skull%20nuclei.zip?download=1', zipPath)
+        with zipfile.ZipFile(zipPath, 'r') as zip_ref:
+            zip_ref.extractall("./data")
 
 
 # In[ ]:
 
+path = './data/Mouse_skull_nuclei/'
+# Check if file exists before trying to load it
+if not os.path.exists(path+'edgeoftheslide_300offset.tif'):
+    raise FileNotFoundError(f"Could not find data file at {path}edgeoftheslide_300offset.tif. Please make sure you've uploaded the data correctly.")
 
-path = "./data/Mouse_skull_nuclei/"
 observation = imread(path+'edgeoftheslide_300offset.tif') #Load the noisy data to be denoised
 
 
@@ -74,9 +123,31 @@ observation = imread(path+'edgeoftheslide_300offset.tif') #Load the noisy data t
 # In[ ]:
 
 
-pseudo_gt_path="./pseudo_gt/"
-signal = imread(pseudo_gt_path+'*.tif') # Load pseudo GT (obtained as a result of denoising from other methods)
+# In Colab, we might need to create a pseudo_gt directory or upload files
+if IN_COLAB and not os.path.exists('./pseudo_gt'):
+    os.mkdir('./pseudo_gt')
+    print("Please upload your pseudo GT denoised images (*.tif files):")
+    files.upload()  # This will open a file picker
+    
+    # Move uploaded files to pseudo_gt directory
+    import glob
+    for f in glob.glob("*.tif"):
+        os.rename(f, f"./pseudo_gt/{f}")
 
+pseudo_gt_path="./pseudo_gt/"
+# Check for files in the directory
+if not os.listdir(pseudo_gt_path):
+    print(f"No files found in {pseudo_gt_path}. For this example, we'll use the observation as pseudo GT.")
+    # As a fallback, use the observation data as pseudo GT (for demonstration only)
+    if not os.path.exists(pseudo_gt_path):
+        os.makedirs(pseudo_gt_path)
+    imwrite(f"{pseudo_gt_path}/pseudo_gt.tif", observation[0])
+    signal = imread(f"{pseudo_gt_path}/pseudo_gt.tif")[np.newaxis, ...]
+else:
+    signal = imread(pseudo_gt_path+'*.tif') # Load pseudo GT (obtained as a result of denoising from other methods)
+
+
+# Continue with the rest of the code...
 
 # Specify ```path``` where the noisy data will be loaded from. It is the same path where noise model will be stored when created later, ```dataName``` is the name you wish to have for the noise model,  ```n_gaussian``` to indicate how mamny Gaussians willbe used for learning a GMM based noise model, ```n_coeff``` for indicating number of polynomial coefficients will be used to patrametrize the mean, standard deviation and weight of GMM noise model. The default settings for ```n_gaussian``` and ```n_coeff``` generally work well for most datasets.
 
