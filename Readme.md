@@ -91,10 +91,36 @@ Image denoising traditionally attempts to map noisy images to their clean counte
 
 ---
 
+## 🔬 Examples
+
+This repository includes Jupyter notebooks demonstrating DivNoising on real microscopy data:
+
+### Convallaria Dataset
+- **0a-CreateNoiseModel**: Create a GMM noise model with calibration data
+- **1-Training**: Train a DivNoising VAE model on Convallaria images
+- **2-Prediction**: Generate multiple plausible denoised images
+
+Try it yourself on Google Colab: [Convallaria DivNoising Example](https://colab.research.google.com/drive/1z6qL7erw4OP85Xmu5YZ_kGApMyO7n2Dz?usp=sharing#scrollTo=sCZYSeyaZrZc)
+
+### Mouse Nuclei Dataset
+- **0a-CreateNoiseModel**: Adapt the noise model for Mouse Nuclei images
+- **1-Training**: Train a dedicated model for the Mouse Nuclei dataset
+- **2-Prediction**: Apply the model to denoise nuclei images
+
+Navigate to the `examples/` directory to access these notebooks and run them with your own data.
+
+---
+
 ## 📂 Structure
 
 ```bash
 .
+├── divnoising/              # Core implementation code
+├── examples/                # Example notebooks for different datasets
+│   ├── Convallaria/         # Convallaria plant cell examples
+│   └── Mouse_nuclei/        # Mouse nuclei microscopy examples
+├── nets/                    # Neural network architectures
 ├── presentation.pdf         # Paper presentation slides/report
 ├── README.md                # This file
-└── resources/               # (optional) figures, models, etc.
+├── requirements.txt         # Python dependencies
+└── DivNoising.yml           # Conda environment specification
