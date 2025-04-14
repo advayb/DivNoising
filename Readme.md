@@ -107,6 +107,8 @@ Try it yourself on Google Colab: [Convallaria DivNoising Example](https://colab.
 - **1-Training**: Train a dedicated model for the Mouse Nuclei dataset
 - **2-Prediction**: Apply the model to denoise nuclei images
 
+Try it yourself on Google Colab: [Mouse Nuclei DivNoising Example](https://colab.research.google.com/drive/1vP3v7ozIa1_5jc8e6Co-No_htVz31gW0?authuser=0#scrollTo=th13RS9FM0Tj)
+
 Navigate to the `examples/` directory to access these notebooks and run them with your own data.
 
 ---
