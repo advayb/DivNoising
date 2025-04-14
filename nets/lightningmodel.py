@@ -6,7 +6,7 @@ from collections import OrderedDict
 from torch.nn import init
 import numpy as np
 import pytorch_lightning as pl
-from model.losses import loss_fn
+from divnoising.losses import loss_fn
 from tqdm import tqdm
 
 class DownConv(nn.Module):
